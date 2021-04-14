@@ -1,0 +1,62 @@
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see http://www.gnu.org/licenses/.
+//
+//
+// @author qucheng
+//
+
+cplusplus {{
+#include "common/TransportAddress.h"
+#include "Blockchain.h"
+
+using namespace dioxide;
+}}
+
+// import the IP Address class
+class noncobject TransportAddress;
+// import the blockchain structure class
+class noncobject FullBlock;
+class noncobject ChainBlock;
+class noncobject RelayTransaction;
+
+// first, we declare an enum to tell the message types apart:
+enum MessageType
+{
+    DMSG_FORWARDED_TX = 0;    // forwarded relay tx from full node to other zone
+    DMSG_RELAY_TX = 1;        // inbound relay tx broadcast in zone
+    DMSG_BLOCK = 2;           // chaining block from full node to coordinator
+    DMSG_FULL_BLOCK = 3;      // full block from full node broadcast in zone
+}
+
+// now we declare the message
+packet DioxideMessage
+{
+    int type enum(MessageType);      // message type
+    TransportAddress senderAddress;  // address of the node that sent the message
+    int senderKey; // key of message sender
+}
+
+packet DChainBlockMessage extends DioxideMessage
+{
+    ChainBlock chainBlock;
+}
+packet DFullBlockMessage extends DioxideMessage
+{
+    FullBlock fullBlock;
+}
+packet DRelayTransactionMessage extends DioxideMessage
+{
+    RelayTransaction relayTransaction;
+}
+

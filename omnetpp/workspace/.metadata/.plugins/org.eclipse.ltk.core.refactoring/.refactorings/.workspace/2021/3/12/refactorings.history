@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Delete resource &apos;OverSim/simulations/results/record/MonoxideParam.anf&apos;" deleteContents="false" description="Delete resource &apos;OverSim/simulations/results/record/MonoxideParam.anf&apos;" element1="/OverSim/simulations/results/record/MonoxideParam.anf" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1615883078041"/>
+</session>

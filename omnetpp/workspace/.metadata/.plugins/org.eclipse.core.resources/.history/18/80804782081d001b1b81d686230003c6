@@ -1,0 +1,121 @@
+/*
+ * Blockchain.h
+ *
+ *  Created on: Nov 2, 2020
+ *      Author: qucheng
+ */
+
+#ifndef APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+#define APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+
+class MerkleTreeData
+{
+public:
+    virtual inline int hash() const{
+        return 0;
+    }
+};
+
+class Transaction: public MerkleTreeData
+{
+};
+
+class CoinbaseTransaction: public MerkleTreeData
+{
+public:
+    virtual inline int hash() const override{
+        return 1;
+    }
+};
+
+class MerkleTreePathNode
+{
+    MerkleTreePathNode *left, *right, *parent;
+    int hash, hash_proof;
+};
+
+class MerkleTreePath
+{
+public:
+    MerkleTreePath *root, *leaf;
+    MerkleTreeData *data;
+};
+
+class MerkleTreeNode
+{
+public:
+    MerkleTreeNode *left, *right, *parent;
+    int hashvalue;
+    MerkleTreeData *data;
+
+    int hash
+};
+
+class MerkleTree
+{
+public:
+    MerkleTreeNode *root;
+    int size;
+    MerkleTreeData *data;
+
+    MerkleTreeNode *createMerkleTree(int index, MerkleTreeNode *root){
+        if (index>this->size){
+            return nullptr;
+        }
+        MerkleTreeNode *node = new MerkleTreeNode();
+        node->data = this->data[index-1];
+        node->hash = node->data->hash();
+        node->parent = root;
+        node->left = createMerkleTree(index*2, node);
+        node->right = createMerkleTree(index*2+1, node);
+
+    }
+
+    MerkleTree(MerkleTreeData *data, int size){
+        this->data = data;
+        this->size = size;
+        root = new MerkleTreeNode();
+        for (int i = 0; i < size; i++){
+            d = data[i];
+
+        }
+    }
+};
+
+class RelayTx: public MerkleTreeData
+{
+    int scale;
+    int index;
+    int orig_block_height;
+    int position;
+    Transaction *relay_tx;
+    MerkleTreePath *relay_tx_path;
+};
+
+class TransactionBlock
+{
+public:
+    MerkleTree *txs;
+    CoinbaseTransaction *coinbase;
+};
+
+class BatchChainBlock: public MerkleTreeData
+{
+public:
+    int version;
+    int scale;
+    int index;
+    int prev_hash;
+    int timestamp;
+    int pow_target;
+    int confirmed_root;
+    int outbound_root;
+    TransactionBlock *tx_block;
+    MerkleTreePath *header_path;
+    int base_index;
+    int batch_size;
+    int batch_scale;
+    int batch_pow_nonce;
+};
+
+#endif /* APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_ */

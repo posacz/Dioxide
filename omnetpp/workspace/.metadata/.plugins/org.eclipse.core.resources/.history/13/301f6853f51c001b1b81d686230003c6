@@ -1,0 +1,92 @@
+/*
+ * Blockchain.h
+ *
+ *  Created on: Nov 2, 2020
+ *      Author: qucheng
+ */
+
+#ifndef APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+#define APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+
+#include <array>
+
+class MerkleTreeData
+{
+public:
+    int hashvalue;
+    virtual inline int hash() const{
+        return hashvalue;
+    }
+};
+
+class Transaction: public MerkleTreeData
+{
+};
+
+class CoinbaseTransaction: public MerkleTreeData
+{
+};
+
+class MerkleTreeNode
+{
+public:
+    MerkleTreeNode *left, *right, *parent;
+    int hash;
+    T *data;
+};
+
+class MerkleTree
+{
+public:
+    MerkleTreeNode *root;
+    int size;
+};
+
+class MerkleTreePathNode
+{
+    MerkleTreePathNode *left, *right, *parent;
+    int hash, hash_proof;
+};
+
+class MerkleTreePath
+{
+public:
+    MerkleTreePath *root, *leaf;
+    MerkleTreeData *data;
+};
+
+class RelayTx: public MerkleTreeData
+{
+    int scale_k;
+    int index_s;
+    int orig_block_height_t;
+    int position_p;
+    Transaction *relay_tx;
+    MerkleTreePath *relay_tx_path;
+};
+
+class TransactionBlock
+{
+public:
+    MerkleTree *txs;
+    CoinbaseTransaction *coinbase;
+};
+
+class BatchChainBlock: public MerkleTreeData
+{
+public:
+    int version;
+    int scale_k;
+    int index_s;
+    int prev_hash;
+    int timestamp;
+    int pow_target;
+    int confirmed_root;
+    int outbound_root;
+    TransactionBlock *tx_block;
+    MerkleTreePath *header_path;
+
+};
+
+
+#endif /* APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_ */

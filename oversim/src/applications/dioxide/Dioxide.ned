@@ -1,0 +1,64 @@
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see http://www.gnu.org/licenses/.
+// 
+//
+// @author qucheng
+//
+import oversim.common.BaseApp;
+import oversim.common.ITier;
+
+package oversim.applications.dioxide;
+
+simple Dioxide extends BaseApp
+{
+    parameters:
+        @class(Dioxide);
+        int sharding_scale;
+        int n_full_nodes;
+        int n_validators;
+        
+        // we do not simulate epoch, only simulate time slot
+        int time_slot; //ms
+        int block_size; //kB
+        int transaction_size; //B
+}
+
+module DioxideModules like ITier
+{
+    gates:
+        input udpIn;             // gate from the UDP layer
+        output udpOut;           // gate to the UDP layer
+        input from_lowerTier;    // gate from the lower tier
+        input from_upperTier;    // gate from the upper tier
+        output to_lowerTier;     // gate to the lower tier
+        output to_upperTier;     // gate to the upper tier
+        input tcpIn;             // gate from the TCP layer
+        output tcpOut;           // gate to the TCP layer
+        input trace_in;          // gate for trace file commands
+        
+    submodules:
+        application: Dioxide;
+
+    connections allowunconnected:
+        udpIn --> application.udpIn;
+        udpOut <-- application.udpOut;
+        from_lowerTier --> application.from_lowerTier;
+        to_lowerTier <-- application.to_lowerTier;
+        from_upperTier --> application.from_upperTier;
+        to_upperTier <-- application.to_upperTier;
+        tcpIn --> application.tcpIn;
+        tcpOut <-- application.tcpOut;
+        trace_in --> application.trace_in;
+}
+

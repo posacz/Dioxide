@@ -1,0 +1,36 @@
+/*
+ * Blockchain.h
+ *
+ *  Created on: Nov 2, 2020
+ *      Author: qucheng
+ */
+
+#ifndef APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+#define APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+
+class TransactionBlock
+{
+
+};
+
+class ChainBlock
+{
+    int version;
+    int scale_k;
+    int index_s;
+    int prev_hash;
+    int timestamp;
+    int pow_target;
+    int pow_nonce;
+    int confirmed_root;
+    int outbound_root;
+    TransactionBLock *tx_block;
+};
+
+
+
+
+
+
+
+#endif /* APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_ */

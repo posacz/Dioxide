@@ -1,0 +1,72 @@
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see http://www.gnu.org/licenses/.
+//
+//
+// @author qucheng
+//
+
+cplusplus {{
+#include "common/TransportAddress.h"
+#include "Blockchain.h"
+}}
+
+// import the IP Address class
+class noncobject TransportAddress;
+// import the blockchain structure class
+class noncobject BatchChainBlock;
+class noncobject ChainBlock;
+class noncobject PoWPuzzle;
+class noncobject PoWNonce;
+class noncobject RelayTransaction;
+
+// first, we declare an enum to tell the message types apart:
+enum MessageType
+{
+    MMSG_FORWARDED_TX = 0;    // forwarded relay tx from full node to other zone
+    MMSG_RELAY_TX = 1;        // inbound relay tx broadcast in zone 
+    MMSG_BLOCK = 2;           // chaining block from full node to mining coordinator
+    MMSG_POW_PUZZLE = 3;      // block header list from mining coordinator to all miners
+    MMSG_POW_NONCE = 4;       // batch pow nonce from miner to mining coordinator
+    MMSG_BATCH_BLOCK = 5;     // batch chaining block from mining coordinator to full node
+    MMSG_FULL_BLOCK = 6;      // full block from full node broadcast to zone
+}
+
+// now we declare the message
+packet MonoxideMessage
+{
+    int type enum(MessageType);      // message type
+    TransportAddress senderAddress;   // address of the node that sent the message
+    int sender_key; // key of message sender
+}
+
+packet ChainBlockMessage extends MonoxideMessage
+{
+    ChainBlock chainBlock;
+}
+packet PoWPuzzleMessage extends MonoxideMessage 
+{
+    PoWPuzzle powPuzzle;
+}
+packet PoWNonceMessage extends MonoxideMessage
+{
+    PoWNonce powNonce;
+}
+packet BatchChainBlockMessage extends MonoxideMessage
+{
+    BatchChainBlock batchChainBlock;
+}
+packet RelayTransactionMessage extends MonoxideMessage
+{
+    RelayTransaction relayTransaction;
+}

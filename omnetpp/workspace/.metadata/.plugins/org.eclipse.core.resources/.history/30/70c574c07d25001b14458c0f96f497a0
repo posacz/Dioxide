@@ -1,0 +1,220 @@
+/*
+ * Monoxide.cc
+ *
+ *  Created on: Oct 30, 2020
+ *      Author: qucheng
+ */
+
+
+#include <string>
+
+#include "common/UnderlayConfigurator.h"
+#include "common/GlobalStatistics.h"
+
+#include "applications/monoxide/Monoxide_m.h"
+
+#include "applications/monoxide/Monoxide.h"
+
+#include "common/InitStages.h"
+
+Define_Module(Monoxide);
+
+int Monoxide::global_index = 0;
+int Monoxide::global_tx_id = 0;
+int Monoxide::global_block_id = 0;
+
+static inline int get_zone_id(const int& pub_key, const int& sharding_scale){
+    return pub_key & ((1<<sharding_scale)-1);
+}
+
+// initializeApp() is called when the module is being created.
+// Use this function instead of the constructor for initializing variables.
+void Monoxide::initializeApp(int stage)
+{
+    // initializeApp will be called twice, each with a different stage.
+    // stage can be either MIN_STAGE_APP (this module is being created),
+    // or MAX_STAGE_APP (all modules were created).
+    // We only care about MIN_STAGE_APP here.
+
+    if (stage != MIN_STAGE_APP) return;
+
+    // copy the module parameter values to our own variables
+    sharding_scale = par("sharding_scale");
+    n_full_nodes = par("n_full_nodes");
+    n_miners = par("n_miners");
+    n_coordinators = par("n_coordinators");
+
+    block_interval = par("block_interval");
+    block_size = par("block_size");
+
+    // set node parameters
+    srt_key = global_index++; // set srt_key be a incremental value
+    pub_key = srt_key; // only for simulation, set pub_key = srt_key
+
+    n_zones = (1<<sharding_scale);
+
+    /* each zone: n_full_nodes*n_coordinators full nodes, n_miners*n_coordinators/n_zones miners
+     * pub_key:
+     * 0 ~ n_full_nodes*n_coordinators*n_zones : ROLE_FULL_NODE
+     *   + 0 ~ n_zones-1 : coordinator 0
+     *   + n_zones ~ 2*n_zones-1 : coordinator 1
+     *     ...
+     * n_full_nodes*n_coordinators*n_zones ~ (n_full_nodes*n_zones+n_miners)*n_coordinators : ROLE_MINER
+     *   + 0 ~ n_miners-1 : coordinator 0
+     *   + n_miners ~ 2*n_miners-1 : coordinator 1
+     *     ...
+     */
+    int total_full_nodes = n_full_nodes * n_coordinators * n_zones;
+    if (pub_key < total_full_nodes){ // full node
+        zone_id = get_zone_id(pub_key, sharding_scale);
+        coordinator_id = pub_key / n_zones;
+        role = ROLE_FULL_NODE;
+    } else { // miner
+        role = ROLE_MINER;
+        coordinator_id = (pub_key-total_full_nodes) / n_miners;
+        if ((pub_key-total_full_nodes) % n_miners == 0){ // first miner as coordinator
+            role |= ROLE_COORDINATOR;
+        }
+    }
+    coordinator_id = (coordinator_id*n_miners) + total_full_nodes;
+
+    // initialize our statistics variables
+    numSent = 0;
+    numReceived = 0;
+
+    // tell the GUI to display our variables
+    WATCH(numSent);
+    WATCH(numReceived);
+
+    if (role == ROLE_FULL_NODE){
+        // *. FULL_NODEs init with initial Transaction, no inbound RelayTransaction at bootstrap
+        // create transaction pool and init blockchain structure
+        tx_pool = new TransactionPool(100);
+        blockchain = new Blockchain();
+
+        // 1. FULL_NODEs generate new TransactionBlock and ChainBlock with Transaction and confirmed inbound RelayTransaction.
+        // generate a chain block, filled with initial transactions
+        tx_block = new TransactionBlock(100);
+        for (int i = 0; i < 100; ++i){
+            Transaction *tx = new Transaction();
+            tx_block->txs.push_back(tx);
+        }
+        // create merkle tree
+        tx_block->buildBlock(coordinator_id);
+
+        // 2. FULL_NODEs send ChainBlock to COORDINATOR.
+        // send block header to coordinator
+        OverlayKey coordinatorKey(coordinator_id);
+        ChainBlockMessage *chainBlockMsg = new ChainBlockMessage();
+        ChainBlock &chainBlock = chainBlockMsg->getChainBlock();
+        chainBlock.version = blockchain->block_height + 1; // we use version to store the block height
+        chainBlock.scale = sharding_scale;
+        chainBlock.index = zone_id;
+        chainBlock.prev_hash = 0; // initial block, no prev_hash
+        chainBlock.timestamp = static_cast<int>(simTime().dbl());
+        chainBlock.pow_target = block_interval; // we use this to indicate average block time
+        chainBlock.confirmed_root = tx_block->confirmedRoot();
+        chainBlock.outbound_root = tx_block->outboundRoot();
+
+        chainBlockMsg->setType(MMSG_BLOCK); // set the message type to PING
+        chainBlockMsg->setSenderAddress(thisNode); // set the sender address to our own
+        chainBlockMsg->setByteLength(100); // set the message length to 100 bytes
+
+        numSent++; // update statistics
+
+        EV << thisNode.getIp() << ": Sending ChainBlock to "
+           << coordinatorKey << "!" << std::endl;
+
+        callRoute(coordinatorKey, chainBlockMsg); // send it to the coordinator through overlay
+    } else if (role & ROLE_MINER){
+        // pass
+    } else if (role & ROLE_COORDINATOR){
+        // coordinator init the block list
+        block_list = new ChainBlockList(n_zones);
+    }
+
+    bindToPort(2000);
+}
+
+
+// finish is called when the module is being destroyed
+void Monoxide::finishApp()
+{
+    // finish() is usually used to save the module's statistics.
+    // We'll use globalStatistics->addStdDev(), which will calculate min, max, mean and deviation values.
+    // The first parameter is a name for the value, you can use any name you like (use a name you can find quickly!).
+    // In the end, the simulator will mix together all values, from all nodes, with the same name.
+
+    globalStatistics->addStdDev("Monoxide: Sent packets", numSent);
+    globalStatistics->addStdDev("Monoxide: Received packets", numReceived);
+}
+
+
+// handleTimerEvent is called when a timer event triggers
+void Monoxide::handleTimerEvent(cMessage* msg)
+{
+    // is this our timer?
+    if (msg != timerMsg) {
+        delete msg;
+        return;
+    }
+
+    // if the simulator is still busy creating the network,
+    // let's wait a bit longer
+    if (underlayConfigurator->isInInitPhase()) return;
+
+    if (role == ROLE_FULL_NODE){
+
+    } else if (role == ROLE_MINER){
+        // pow finished
+
+    }
+}
+
+// deliver() is called when we receive a message from the overlay.
+// Unknown packets can be safely deleted here.
+void Monoxide::deliver(OverlayKey& key, cMessage* msg)
+{
+    // we are only expecting messages of type DioxideMessage, throw away any other
+    MonoxideMessage *monoxideMsg = dynamic_cast<MonoxideMessage*>(msg);
+    if (monoxideMsg == nullptr) {
+        delete msg; // type unknown!
+        return;
+    }
+    EV << thisNode.getIp() << ": Got packet from "
+       << monoxideMsg->getSenderAddress() << std::endl;
+    int msgType = monoxideMsg->getType();
+    int senderKey = monoxideMsg->getSenderAddress()
+    if (role == ROLE_COORDINATOR){
+        if (msgType == MMSG_BLOCK) {
+            ChainBlockMessage *chainBlockMsg = dynamic_cast<ChainBlockMessage*>(monoxideMsg);
+            // 3. COORDINATOR gather ChainBlocks and form ChainBlockList.
+            ChainBlock *chainBlock = new ChainBlock(chainBlockMsg->getChainBlock());
+            block_list->headers.push_back(chainBlock);
+        } else if (msgType == MMSG_POW_NONCE){
+
+        } else {
+            delete monoxideMsg;
+        }
+    } else if (role == ROLE_MINER) {
+    } else {
+        delete monoxideMsg;
+    }
+    // send it back to its owner
+    //sendMessageToUDP(monoxideMsg->getSenderAddress(), monoxideMsg);
+}
+
+// handleUDPMessage() is called when we receive a message from UDP.
+// Unknown packets can be safely deleted here.
+void Monoxide::handleUDPMessage(cMessage* msg)
+{
+    // we are only expecting messages of type DioxideMessage
+    MonoxideMessage *monoxideMsg = dynamic_cast<MonoxideMessage*>(msg);
+
+    if (monoxideMsg) {
+        numReceived++;
+    }
+
+    // Message isn't needed any more -> delete it
+    delete msg;
+}

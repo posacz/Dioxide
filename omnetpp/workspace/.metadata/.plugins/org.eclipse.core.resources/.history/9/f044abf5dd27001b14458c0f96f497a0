@@ -1,0 +1,112 @@
+/*
+ * Blockchain.c
+ *
+ *  Created on: Nov 3, 2020
+ *      Author: qucheng
+ */
+
+#include "Blockchain.h"
+
+#include <algorithm>
+
+MerkleTreePath::~MerkleTreePath(){
+    MerkleTreePathNode *leaf = this->leaf, *next_leaf = nullptr;
+    while (leaf->parent != nullptr){
+        next_leaf = leaf->parent;
+        delete leaf;
+        leaf = next_leaf;
+    }
+}
+
+TransactionBlock::TransactionBlock(){
+    tx_tree = nullptr;
+    outbound_tx_tree = nullptr;
+}
+
+TransactionBlock::~TransactionBlock(){
+    delete tx_tree;
+    delete outbound_tx_tree;
+}
+
+void TransactionBlock::buildBlock(int miner){
+    CoinbaseTransaction *tx = new CoinbaseTransaction(miner);
+    txs.push_back(tx);
+    tx_tree = new MerkleTree<BaseTransaction>(&txs);
+
+    // outbound transactions
+    outbound_tx_tree = new MerkleTree<Transaction>(&outbound_txs);
+}
+
+int TransactionBlock::confirmedRoot() const{
+    return tx_tree->root->hashvalue;
+}
+
+int TransactionBlock::outboundRoot() const{
+    // outbound tx may be not exists
+    if (outbound_tx_tree->root == nullptr){
+        return 0;
+    }
+    return outbound_tx_tree->root->hashvalue;
+}
+
+void TransactionBlock::clear(){
+    delete tx_tree;
+    delete outbound_tx_tree;
+    tx_tree = nullptr;
+    outbound_tx_tree = nullptr;
+    outbound_txs.clear();
+    txs.clear();
+}
+
+bool Blockchain::validate_fork_block(BatchChainBlock *fork_block){
+    if (fork_block->prev_hash == 0 && fork_block->version == 1){
+        // this is the first block
+        return true;
+    }
+}
+
+void Blockchain::store_fork_block(BatchChainBlock *fork_block){
+
+}
+
+bool Blockchain::validate_new_block(BatchChainBlock *new_block){
+    if (last_block == nullptr){
+        if (new_block->prev_hash == 0 && new_block->version == 1){
+            // this is the first block
+            return true;
+        }
+        return false;
+    }
+    if (new_block->version != last_block->version+1){
+        // block height not match
+        return false;
+    }
+    if (last_block->hash() != new_block->prev_hash){
+        // block hash not match
+        return false;
+    }
+    // here we skip validation of transaction block and some field of batch chain block
+    return true;
+}
+
+void Blockchain::store_new_block(BatchChainBlock *new_block){
+    if (last_block == nullptr){
+        // this is the first block
+        assert(block_tree.size() == 0);
+        block_tree.push_back(new_block);
+        last_block = new_block;
+        return;
+    }
+    // find last block in block_tree
+    std::vector<BatchChainBlock*>::iterator result = block_tree.end();
+    for (auto it = block_tree.begin(); it != block_tree.end(); ++it){
+        if (*it == last_block){
+            result = it;
+            break;
+        }
+    }
+    assert(result != block_tree.end());
+    // replace last block with new block
+    *result = new_block;
+    last_block = new_block;
+}

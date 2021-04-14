@@ -1,0 +1,55 @@
+/*
+ * Blockchain.c
+ *
+ *  Created on: Nov 3, 2020
+ *      Author: qucheng
+ */
+
+#include "Blockchain.h"
+
+MerkleTreePath::~MerkleTreePath(){
+    MerkleTreePathNode *leaf = this->leaf, *next_leaf = nullptr;
+    while (leaf->parent != nullptr){
+        next_leaf = leaf->parent;
+        delete leaf;
+        leaf = next_leaf;
+    }
+}
+
+TransactionBlock::TransactionBlock(int capacity):txs(capacity),outbound_txs(capacity){
+    tx_tree = nullptr;
+    outbound_tx_tree = nullptr;
+}
+
+TransactionBlock::~TransactionBlock(){
+    delete tx_tree;
+    delete outbound_tx_tree;
+}
+
+void TransactionBlock::buildBlock(int miner){
+    CoinbaseTransaction *tx = new CoinbaseTransaction(miner);
+    txs.push_back(tx);
+    tx_tree = new MerkleTree<BaseTransaction>(txs);
+
+    // outbound transactions
+    outbound_tx_tree = new MerkleTree<Transaction>(outbound_txs);
+}
+
+int TransactionBlock::confirmedRoot() const{
+    return tx_tree->root->hashvalue;
+}
+
+int TransactionBlock::outboundRoot() const{
+    return outbound_tx_tree->root->hashvalue;
+}
+
+void TransactionBlock::clear(){
+    delete tx_tree;
+    delete outbound_tx_tree;
+    tx_tree = nullptr;
+    outbound_tx_tree = nullptr;
+    outbound_txs.clear();
+    txs.clear();
+}
+
+

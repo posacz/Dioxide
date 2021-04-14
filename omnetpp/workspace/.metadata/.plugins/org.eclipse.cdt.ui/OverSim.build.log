@@ -1,0 +1,10 @@
+22:18:14 **** Incremental Build of configuration gcc-debug for project OverSim ****
+make MODE=debug -j40 all 
+cd src && make
+make[1]: Entering directory '/home/qucheng/sim/oversim/src'
+applications/dioxide/Dioxide.cc
+Creating executable: ../out/gcc-debug/src/OverSim_dbg
+make[1]: Leaving directory '/home/qucheng/sim/oversim/src'
+
+22:18:20 Build Finished. 0 errors, 0 warnings. (took 5s.398ms)
+

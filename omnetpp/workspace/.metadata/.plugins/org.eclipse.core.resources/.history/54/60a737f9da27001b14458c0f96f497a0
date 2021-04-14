@@ -1,0 +1,75 @@
+/*
+ * Blockchain.c
+ *
+ *  Created on: Nov 3, 2020
+ *      Author: qucheng
+ */
+
+#include "Blockchain.h"
+
+MerkleTreePath::~MerkleTreePath(){
+    MerkleTreePathNode *leaf = this->leaf, *next_leaf = nullptr;
+    while (leaf->parent != nullptr){
+        next_leaf = leaf->parent;
+        delete leaf;
+        leaf = next_leaf;
+    }
+}
+
+TransactionBlock::TransactionBlock(){
+    tx_tree = nullptr;
+    outbound_tx_tree = nullptr;
+}
+
+TransactionBlock::~TransactionBlock(){
+    delete tx_tree;
+    delete outbound_tx_tree;
+}
+
+void TransactionBlock::buildBlock(int miner){
+    CoinbaseTransaction *tx = new CoinbaseTransaction(miner);
+    txs.push_back(tx);
+    tx_tree = new MerkleTree<BaseTransaction>(&txs);
+
+    // outbound transactions
+    outbound_tx_tree = new MerkleTree<Transaction>(&outbound_txs);
+}
+
+int TransactionBlock::confirmedRoot() const{
+    return tx_tree->root->hashvalue;
+}
+
+int TransactionBlock::outboundRoot() const{
+    // outbound tx may be not exists
+    if (outbound_tx_tree->root == nullptr){
+        return 0;
+    }
+    return outbound_tx_tree->root->hashvalue;
+}
+
+void TransactionBlock::clear(){
+    delete tx_tree;
+    delete outbound_tx_tree;
+    tx_tree = nullptr;
+    outbound_tx_tree = nullptr;
+    outbound_txs.clear();
+    txs.clear();
+}
+
+void Blockchain::store_fork_block(BatchChainBlock *fork_block){
+
+}
+
+bool Blockchain::validate_new_block(BatchChainBlock *new_block){
+    if (last_block == nullptr){
+        if (new_block->prev_hash == 0){
+            // this is the first block
+            return true;
+        }
+        store_fork_block(new_block);
+        return false;
+    }
+    if (new_block->version == last_block->version)
+}
+
+

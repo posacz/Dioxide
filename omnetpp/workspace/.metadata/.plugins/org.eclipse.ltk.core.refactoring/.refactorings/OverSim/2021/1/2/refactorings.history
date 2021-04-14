@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;OverSim/simulations/results/record/scale&apos; to &apos;scale3&apos;" description="Rename resource &apos;scale&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="simulations/results/record/scale" name="scale3" stamp="1610108331223" updateReferences="true"/>
+</session>

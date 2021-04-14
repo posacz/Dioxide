@@ -1,0 +1,14 @@
+22:18:12 **** Incremental Build of configuration gcc-debug for project inet ****
+make MODE=debug -j40 all 
+cd src && make
+make[1]: Entering directory '/home/qucheng/sim/inet/src'
+*** COMPILING with:
+g++ -c -std=c++11 -g -Wall -MMD -MP -MF .d  -fPIC  -fno-omit-frame-pointer -DHAVE_SWAPCONTEXT -DWITH_MPI -DXMLPARSER=expat -DPREFER_QTENV -DWITH_QTENV -DWITH_PARSIM -DWITH_NETBUILDER -Wno-overloaded-virtual -include inet/common/precompiled_debug.h  -DINET_EXPORT -I. -I/home/qucheng/sim/omnetpp/include
+*** LINKING with:
+g++ -shared -fPIC -o ../out/gcc-debug/src/libINET_dbg.so -Wl,--no-as-needed -Wl,--whole-archive  -Wl,--no-whole-archive -loppenvir_dbg -loppsim_dbg -ldl -lstdc++  -Wl,-rpath,/home/qucheng/sim/omnetpp/lib -Wl,-rpath,/lib -Wl,-rpath,.  -Wl,--export-dynamic -L/home/qucheng/sim/omnetpp/lib
+Building...
+make[1]: Nothing to be done for 'all-pch'.
+make[1]: Leaving directory '/home/qucheng/sim/inet/src'
+
+22:18:14 Build Finished. 0 errors, 0 warnings. (took 1s.512ms)
+

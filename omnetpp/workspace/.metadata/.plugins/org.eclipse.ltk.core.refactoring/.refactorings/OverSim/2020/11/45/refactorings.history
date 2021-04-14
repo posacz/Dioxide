@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;OverSim/src/applications/monoxide/Blockchain.c&apos; to &apos;Blockchain.cc&apos;" description="Rename resource &apos;Blockchain.c&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="src/applications/monoxide/Blockchain.c" name="Blockchain.cc" stamp="1604383683756" updateReferences="true"/>
+</session>

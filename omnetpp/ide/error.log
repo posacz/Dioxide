@@ -1,0 +1,8 @@
+
+(process:26078): Gtk-WARNING **: 22:14:31.895: Locale not supported by C library.
+	Using the fallback 'C' locale.
+
+(process:26242): Gtk-WARNING **: 22:14:36.227: Locale not supported by C library.
+	Using the fallback 'C' locale.
+SWT SessionManagerDBus: Failed to connect to org.gnome.SessionManager: Error spawning command line ?dbus-launch --autolaunch=9b78fa88ec044c21a0dffcab9c6cf297 --binary-syntax --close-stderr?: Child process exited with code 1
+SWT SessionManagerDBus: Failed to connect to org.xfce.SessionManager: Error spawning command line ?dbus-launch --autolaunch=9b78fa88ec044c21a0dffcab9c6cf297 --binary-syntax --close-stderr?: Child process exited with code 1

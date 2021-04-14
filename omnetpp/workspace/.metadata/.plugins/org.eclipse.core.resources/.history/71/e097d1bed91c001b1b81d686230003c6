@@ -1,0 +1,34 @@
+/*
+ * Monoxide.h
+ *
+ *  Created on: Oct 30, 2020
+ *      Author: qucheng
+ */
+
+#ifndef APPLICATIONS_MONOXIDE_MONOXIDE_H_
+#define APPLICATIONS_MONOXIDE_MONOXIDE_H_
+
+class Monoxide : public BaseApp
+{
+    // module parameters
+
+    // statistics
+    int numSent;              //number of packets sent
+    int numReceived;          //number of packets received
+
+    // our timer
+    cMessage *timerMsg;
+
+    // application routines
+    void initializeApp(int stage);                 // called when the module is being created
+    void finishApp();                              // called when the module is about to be destroyed
+    void handleTimerEvent(cMessage* msg);          // called when we received a timer message
+    void deliver(OverlayKey& key, cMessage* msg);  // called when we receive a message from the overlay
+    void handleUDPMessage(cMessage* msg);          // called when we receive a UDP message
+
+public:
+    Monoxide() { timerMsg = NULL; };
+    ~Monoxide() { cancelAndDelete(timerMsg); };
+};
+
+#endif /* APPLICATIONS_MONOXIDE_MONOXIDE_H_ */

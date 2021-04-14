@@ -1,0 +1,316 @@
+/*
+ * Blockchain.h
+ *
+ *  Created on: Nov 2, 2020
+ *      Author: qucheng
+ */
+
+#ifndef APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+#define APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_
+
+#include <vector>
+#include <cmath>
+#include <cassert>
+
+class MerkleTreeData
+{
+public:
+    int hashvalue;
+    virtual inline int hash() const{
+        return hashvalue;
+    }
+    virtual ~MerkleTreeData(){}
+};
+
+class BaseTransaction: public MerkleTreeData
+{
+public:
+    enum{
+        TXSTATE_PENDING = 0,
+        TXSTATE_QUEUING = 1,
+        TXSTATE_PACKING = 2,
+        TXSTATE_WRITTEN = 3,
+        TXSTATE_CONFIRMED = 4,
+    };
+    int state = 0;
+};
+
+class Transaction: public BaseTransaction
+{
+public:
+    int from, to, value, data;
+    int witness;
+};
+
+class CoinbaseTransaction: public BaseTransaction
+{
+public:
+    int miner;
+    explicit inline CoinbaseTransaction(int who):miner(who){}
+};
+
+class MerkleTreePathNode
+{
+public:
+    MerkleTreePathNode *left = nullptr, *right = nullptr, *parent = nullptr;
+    int hashvalue = 0, hash_proof = 0;
+};
+
+class MerkleTreePath
+{
+public:
+    MerkleTreePathNode *root = nullptr, *leaf = nullptr;
+    virtual ~MerkleTreePath();
+};
+
+class MerkleTreeNode
+{
+public:
+    MerkleTreeNode *left = nullptr, *right = nullptr, *parent = nullptr;
+    int hashvalue = 0;
+    MerkleTreeData *data = nullptr;
+};
+
+template <typename T>
+class MerkleTree
+{
+public:
+    MerkleTreeNode *root = nullptr;
+    int size = 0, depth = 0;
+    std::vector<T*> *data = nullptr;
+
+    MerkleTreeNode *createMerkleTree(int& index, int depth){
+        if (index>=this->size){
+            return nullptr;
+        }
+        MerkleTreeNode *node = new MerkleTreeNode();
+        //leaf node
+        if (depth==this->depth){
+            node->data = static_cast<MerkleTreeData*>((*this->data)[index]);
+            node->hashvalue = node->data->hash();
+            index += 1;
+            return node;
+        }
+        //left child
+        node->left = this->createMerkleTree(index, depth+1);
+        node->left->parent = node;
+        //right child
+        node->right = this->createMerkleTree(index, depth+1);
+        if (node->right != nullptr){
+            node->right->parent = node;
+        }
+        //hashvalue
+        node->hashvalue = node->left->hashvalue;
+        if (node->right != nullptr){
+            node->hashvalue += node->right->hashvalue;
+        }
+        return node;
+    }
+    void deleteMerkleTree(MerkleTreeNode *root){
+        if (root == nullptr){
+            return;
+        }
+        this->deleteMerkleTree(root->left);
+        this->deleteMerkleTree(root->right);
+        delete root;
+    }
+
+    explicit MerkleTree(std::vector<T*> *data){
+        assert(data != nullptr);
+        this->data = data;
+        this->size = data->size();
+        if (size == 0){
+            this->depth = 0;
+            return;
+        }
+        if (size == 1){
+            this->depth = 1;
+        }else{
+            this->depth = floor(log2(size-1))+2;
+        }
+        int index = 0;
+        this->root = this->createMerkleTree(index, 1);
+    }
+    virtual ~MerkleTree(){
+        this->deleteMerkleTree(this->root);
+    }
+
+    MerkleTreePath *generatePath(int index){
+        if (index >= this->size){
+            return nullptr;
+        }
+        MerkleTreePath *path = new MerkleTreePath();
+        MerkleTreePathNode *path_root = new MerkleTreePathNode();
+        path->root = path_root;
+        MerkleTreeNode *cur_node = this->root;
+        MerkleTreePathNode *path_node = path_root;
+        for (int d=1; d<this->depth; ++d){
+            path_node->hashvalue = cur_node->hashvalue;
+            if (index & (1<<(this->depth-d-1))){
+                path_node->right = new MerkleTreePathNode();
+                path_node->hash_proof = cur_node->left->hashvalue;
+                path_node->right->parent = path_node;
+                path_node = path_node->right;
+                cur_node = cur_node->right;
+            }else{
+                path_node->left = new MerkleTreePathNode();
+                if (cur_node->right != nullptr){
+                    path_node->hash_proof = cur_node->right->hashvalue;
+                }
+                path_node->left->parent = path_node;
+                path_node = path_node->left;
+                cur_node = cur_node->left;
+            }
+        }
+        path_node->hashvalue = cur_node->hashvalue;
+        path->leaf = path_node;
+        return path;
+    }
+};
+
+class RelayTransaction: public BaseTransaction
+{
+    int scale;
+    int index;
+    int orig_block_height;
+    int position;
+    Transaction *relay_tx; // the outbound transaction from another zone
+    MerkleTreePath *relay_tx_path;
+};
+
+class TransactionPool
+{
+public:
+    std::vector<BaseTransaction*> txs;
+
+    TransactionPool(){}
+    virtual ~TransactionPool(){}
+};
+
+class TransactionBlock
+{
+public:
+    MerkleTree<BaseTransaction> *tx_tree;
+    std::vector<BaseTransaction*> txs;
+
+    MerkleTree<Transaction> *outbound_tx_tree;
+    std::vector<Transaction*> outbound_txs;
+
+    TransactionBlock();
+    virtual ~TransactionBlock();
+
+    void buildBlock(int miner);
+
+    int confirmedRoot() const;
+    int outboundRoot() const;
+
+    void clear();
+};
+
+class ChainBlock: public MerkleTreeData
+{
+public:
+    // block header
+    int version;
+    int scale;
+    int index;
+    int prev_hash;
+    int timestamp;
+    int pow_target;
+    int confirmed_root; // transaction block tx_tree root
+    int outbound_root;
+};
+
+class ChainBlockList
+{
+public:
+    MerkleTree<ChainBlock> *header_tree = nullptr;
+    std::vector<ChainBlock*> headers;
+    int size, capacity;
+
+    explicit ChainBlockList(int capacity):headers(capacity),capacity(capacity){
+        for (int i=0; i<capacity; ++i){
+            headers[i] = nullptr;
+        }
+        size = 0;
+    }
+    virtual ~ChainBlockList(){
+        delete header_tree;
+    }
+    inline void add(ChainBlock *chainBlock){
+        int zone_id = chainBlock->index;
+        assert(headers[zone_id]==nullptr);
+        headers[zone_id] = chainBlock;
+        ++size;
+    }
+    inline void buildTree(){
+        assert(size==capacity);
+        header_tree = new MerkleTree<ChainBlock>(&headers);
+    }
+    inline void clear(){
+        assert(size==capacity);
+        delete header_tree;
+        for (int i=0; i<capacity; ++i){
+            delete headers[i];
+            headers[i] = nullptr;
+        }
+    }
+    inline int root_hash() const{
+        return header_tree->root->hashvalue;
+    }
+};
+
+class PoWPuzzle
+{
+public:
+    // batch config
+    int base_index;
+    int batch_size;
+    int batch_scale;
+    // block list root
+    int block_list_root;
+};
+
+class PoWNonce: public PoWPuzzle
+{
+public:
+    int pow_nonce;
+};
+
+class BatchChainBlock: public MerkleTreeData
+{
+public:
+    // chain block
+    int version;
+    int scale;
+    int index;
+    int prev_hash;
+    int timestamp;
+    int pow_target;
+    int confirmed_root;
+    int outbound_root;
+
+    // batch chain block
+    MerkleTreePath *header_path;
+    int base_index;
+    int batch_size;
+    int batch_scale;
+    int batch_pow_nonce;
+
+    // reference
+    TransactionBlock *tx_block;
+};
+
+class Blockchain
+{
+public:
+    BatchChainBlock *last_block = nullptr; // store last valid block
+    // if fork exists, store all blocks of all forks
+    std::vector<BatchChainBlock*> block_tree;
+
+    void store_fork_block(BatchChainBlock *fork_block);
+    bool validate_new_block(BatchChainBlock *new_block);
+    void store_new_block(BatchChainBlock *new_block);
+};
+
+#endif /* APPLICATIONS_MONOXIDE_BLOCKCHAIN_H_ */

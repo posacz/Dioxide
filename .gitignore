@@ -1,0 +1,8 @@
+*.anf
+*.sca
+*.vci
+*.vec
+
+*.o
+*.o.d
+
