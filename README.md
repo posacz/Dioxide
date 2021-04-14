@@ -15,3 +15,6 @@ oversim/src/overlay/monoxideoverlay: The implementation of a slightly modified K
 
 ## Running
 About how to run this project using Eclipse IDE and get result, please refer to the section "Tips for using the Eclipse IDE" on http://www.oversim.org/wiki/OverSimUsage
+
+The config MonoxideParam in omnetpp.ini is the simulation configuration of our implementation of Monoxide backbone protocol.
+The config DioxideParam in omnetpp.ini is the simualtion configuration of our implementation of this protocol.
